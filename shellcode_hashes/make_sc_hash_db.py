@@ -1159,6 +1159,336 @@ pseudocode_fnv1 = '''
 '''
 
 ############################################################
+# new
+############################################################
+
+def ror13AddHash32Dll(inString,fName):
+    if isinstance(fName, str):
+        fName = fName.encode('utf-8')
+    dll_hash = 0
+    for c in fName:
+        dll_hash = ror(dll_hash, 0xd, 32)
+        if c < 97:
+            dll_hash = int(dll_hash) + c
+        else:
+            dll_hash = int(dll_hash) + c - 32
+        dll_hash = ror(dll_hash, 0xd, 32)
+    dll_hash = ror(dll_hash, 0xd, 32)
+    dll_hash = ror(dll_hash, 0xd, 32)
+
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val = ror(val, 0xd, 32)
+        val += i
+    val = ror(val, 0xd, 32)
+    val += dll_hash
+    if val >= 4294967296:
+        val -= 4294967296
+    return val
+
+pseudocode_ror13AddHash32Dll = '''acc := 0;
+for c in input_string {
+   acc := ROR(acc, 13);
+   acc := acc + c;
+}
+acc := acc + ror13add(dll_name);
+'''
+
+def or60hAddShl1Hash32(inString,fName):
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val += i | 96
+        val = val << 1
+    return val & 0xFFFFFFFF
+
+pseudocode_or60hAddShl1Hash32 = '''acc := 0;
+for c in input_string {
+   acc := acc | 60h;
+   acc := acc << 1;
+}
+'''
+
+def playWith0xedb88320Hash(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    esi = 0xFFFFFFFF
+    for d in inString:
+        c = d
+        for i in range(8):
+            eax = c
+            eax ^= esi
+            b0  = eax & 0xFF
+            b0 &= 0x01
+            b0  = -b0
+            if b0 % 2 == 0: # sbb eax, eax
+                eax = 0
+            else:
+                eax = 0xFFFFFFFF
+            eax &= 0xedb88320
+            esi >>= 1
+            esi ^= eax
+            c >>= 1
+    return esi ^ 0xFFFFFFFF
+
+pseudocode_playWith0xedb88320Hash = \
+'''Too hard to explain, AND's with 0xedb88320, though.
+String hash function from Gatak sample.
+See code for information'''
+
+def rol7Xor0xe1daa1f0Hash32(inString,fName):
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val = rol(val, 0x7, 32)
+        val = val ^ i
+    return (val ^ 0xe1daa1f0) & 0xFFFFFFFF
+
+pseudocode_rol7Xor0xe1daa1f0Hash32 = '''acc := 0;
+for c in input_string {
+   acc := ROL(acc, 7):
+   acc := acc ^ c;
+}
+acc := acc ^ 0xe1daa1f0
+'''
+
+def rol7Xor0xbefdb605Hash32(inString,fName):
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val = rol(val, 0x7, 32)
+        val = val ^ i
+    return (val ^ 0xbefdb605) & 0xFFFFFFFF
+
+pseudocode_rol7Xor0xbefdb605Hash32 = '''acc := 0;
+for c in input_string {
+   acc := ROL(acc, 7):
+   acc := acc ^ c;
+}
+acc := acc ^ 0xbefdb605
+'''
+
+def shl7SubAddHash32(inString,fName):
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val = ((val << 0x7)- val) & 0xFFFFFFFF
+        val = (val + i) & 0xFFFFFFFF
+    return ((val << 0x7)- val) & 0xFFFFFFFF
+
+pseudocode_shl7SubAddHash32 = '''acc := 0;
+for c in input_string {
+   acc := SHL(acc, 7) - acc:
+   acc := acc + c;
+}
+acc := SHL(acc, 7) - acc
+'''
+
+def ZeusvmHash32(inString,fName):
+    if inString is None:
+        return 0
+    if isinstance(inString, str):
+        # encode to utf-16le as per original code
+        inString = inString.encode('utf-16le')
+    val = 0xFFFFFFFF & (zlib.crc32(inString))
+    val = val ^ 0x61D484E1
+    return val & 0x1FFFFF
+
+pseudocode_ZeusvmHash32 = '''acc := 0;
+acc := (CRC32(inString) ^ 0x61D484E1) & 0x1FFFFF;
+'''
+
+def ponyHash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0xFFFFFFFF
+    for i in inString:
+        val ^= i
+        for i in range(0, 8):
+            if (val&0x1) == 1:
+                val ^= 0x4358AD54
+            val >>= 1
+
+    return (~val) & 0xFFFFFFFF
+
+pseudocode_ponyHash32 = '''TBD
+'''
+
+def playwith5C6B7Hash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    key = 0xF8C9
+    val = 0
+    for i in inString:
+        if i < 65 or i > 90: # 'A' or 'Z'
+            val = (key * val + i) & 0xFFFFFFFF
+        else:
+            val = (key * val + i + 0x20) & 0xFFFFFFFF
+        key = (key * 0x5C6B7) & 0xFFFFFFFF
+
+    return val & 0x7FFFFFFF
+
+pseudocode_playwith5C6B7Hash32 = '''TBD
+'''
+
+
+def zloaderHash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    # .lower() on bytes works in Py3
+    for i in inString.lower():
+        val = i + (val << 4)
+        math2 = ((val & 0xF0000000) & 0xFFFFFFFF)
+        if math2 != 0:
+            math3 = math2 >> 24
+            math4 = val & ~(val ^ 0xFFFFFFF)
+            math5 = (~math4 & 0x110BC900)
+            val = (~math3 & 0x110BC900 | math3 & 0xEEF436FF) ^ (math5 | (math4 & 0xEEF436FF))
+
+    return val & 0xFFFFFFFF
+
+pseudocode_zloaderHash32 = '''TBD
+'''
+
+def zloaderXor9DF7F9F9Hash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString.lower():
+        val = i + (val << 4)
+        math2 = ((val & 0xF0000000) & 0xFFFFFFFF)
+        if math2 != 0:
+            math3 = math2 >> 24
+            math4 = val & ~(val ^ 0xFFFFFFF)
+            math5 = (~math4 & 0x110BC900)
+            val = (~math3 & 0x110BC900 | math3 & 0xEEF436FF) ^ (math5 | (math4 & 0xEEF436FF))
+
+    return (val ^ 0x9DF7F9F9) & 0xFFFFFFFF
+
+pseudocode_zloaderHash32 = '''TBD
+'''
+
+def shl19Shr7AddHash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        edx = 0xffffffff & (val << 0x19)
+        ecx = 0xffffffff & (val >> 7)
+        eax = edx | ecx
+        t = 0xff & i
+        val = eax + t
+    return val
+
+pseudocode_shl19Shr7AddHash32 = '''acc := 0;
+for c in input_string {
+   t0 = (acc << 0x19);
+   t1 = (acc >> 7);
+   t2 = t0 | t1;
+   acc = t2 + c;
+}
+'''
+
+def ror13AddXor0x784ef074Hash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    for i in inString:
+        val = ror(val, 0xd, 32)
+        val = val + i
+    return (val ^ 0x784ef074) & 0xFFFFFFFF
+
+pseudocode_ror13AddXor0x784ef074Hash32 = '''acc := 0;
+for c in input_string {
+   acc := ROR(acc, 13):
+   acc := acc + c;
+}
+acc := acc ^ 0x784ef074
+'''
+
+tbl4 =    [ 0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c]
+
+def crc32Shift4(inString,fName, seed=0):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    crc = ~seed & 0xffffffff
+    for i in inString:
+        x = tbl4[(i ^ crc ) & 0x0f] ^ (((i ^ crc) & 0xffffffff)  >> 4)
+        crc = tbl4[x & 0x0f] ^  ((x & 0xffffffff) >> 4)
+    return ~crc & 0xffffffff
+
+def crc32Shift4Xor218FE95B(inString,fName, seed=0):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    crc = ~seed & 0xffffffff
+    for i in inString:
+        x = tbl4[(i ^ crc ) & 0x0f] ^ (((i ^ crc) & 0xffffffff)  >> 4)
+        crc = tbl4[x & 0x0f] ^  ((x & 0xffffffff) >> 4)
+    return (~crc & 0xffffffff) ^ 0x218FE95B
+
+def deedRatShl5Shr1Shl9Shr3(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    i = 0
+    for c in inString:
+        if i & 1 != 0:
+            val = (val ^ (~((c ^ (val >> 3) ^ (val << 9)) & 0xffffffff))) & 0xffffffff
+        else:
+            val = (val ^ ((c ^ (val >> 1) ^ ((val << 5) & 0xffffffff)) & 0xffffffff)) & 0xffffffff
+        i = i + 1
+
+    return val & 0x7FFFFFFF
+
+def deedRatShl7Shr3Shl11Shr5(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    i = 0
+    for c in inString:
+        if i & 1 != 0:
+            val = (val ^ (~((c ^ (val >> 5) ^ (val << 11)) & 0xffffffff))) & 0xffffffff
+        else:
+            val = (val ^ ((c ^ (val >> 3) ^ ((val << 7) & 0xffffffff)) & 0xffffffff)) & 0xffffffff
+        i = i + 1
+
+    return val & 0x7FFFFFFF
+
+def lodeInfoShl7Shr3Shl11Shr5Xor61E9Hash32(inString,fName):
+    if isinstance(inString, str):
+        inString = inString.encode('utf-8')
+    val = 0
+    i = 0
+    for c in inString.lower():
+        c_val = c
+        if i & 1 != 0:
+            val = (val ^ (~((c_val ^ (val >> 5) ^ (val << 11)) & 0xffffffff))) & 0xffffffff
+        else:
+            val = (val ^ ((c_val ^ (val >> 3) ^ (val << 7)) & 0xffffffff)) & 0xffffffff
+        i = i + 1
+    return (val ^ 0x61E9) & 0xffffffff
+
+############################################################
 
 # The list of tuples of (supported hash name, hash size, pseudo_code)
 HASH_TYPES = [
@@ -1211,7 +1541,24 @@ HASH_TYPES = [
     ('adler32_666', 32, 'Adler32 with starting value 666'),
     ('shift0x82F63B78',           32, 'like crc32c'),
     ('contiApiHashing',       32, pseudocode_contiApiHashing),
-    ('fnv1', 32, pseudocode_fnv1)
+    ('fnv1', 32, pseudocode_fnv1),
+    ('ror13AddHash32Dll',   32, pseudocode_ror13AddHash32Dll),
+    ('ror13AddXor0x784ef074Hash32',   32, pseudocode_ror13AddXor0x784ef074Hash32),
+    ('rol7Xor0xe1daa1f0Hash32', 32, pseudocode_rol7Xor0xe1daa1f0Hash32),
+    ('rol7Xor0xbefdb605Hash32', 32, pseudocode_rol7Xor0xbefdb605Hash32),
+    ('or60hAddShl1Hash32',          32, pseudocode_or60hAddShl1Hash32),
+    ('shl19Shr7AddHash32',     32, pseudocode_shl19Shr7AddHash32),
+    ('playWith0xedb88320Hash', 32, pseudocode_playWith0xedb88320Hash),
+    ('ponyHash32',       32, pseudocode_ponyHash32),
+    ('ZeusvmHash32',       32, pseudocode_ZeusvmHash32),
+    ('playwith5C6B7Hash32', 32, pseudocode_playwith5C6B7Hash32),
+    ('zloaderHash32', 32, pseudocode_zloaderHash32),
+    ('zloaderXor9DF7F9F9Hash32', 32, pseudocode_zloaderHash32),
+    ('crc32Shift4',           32, 'crc32 with shift4'),
+    ('crc32Shift4Xor218FE95B',           32, 'crc32 with shift4 and xor218FE95B'),
+    ('deedRatShl5Shr1Shl9Shr3', 32, 'TBD'),
+    ('deedRatShl7Shr3Shl11Shr5', 32, 'TBD'),
+    ('lodeInfoShl7Shr3Shl11Shr5Xor61E9Hash32', 32, 'TBD'),
 ]
 
 
