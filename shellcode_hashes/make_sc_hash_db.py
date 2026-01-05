@@ -1278,7 +1278,10 @@ class ShellcodeDbCreator(object):
                                 symHash = hashMeth(sym.name,fName)
                                 #print " Done hashing: %08x:%s" % (symHash, sym.name)
                                 if symHash is not None:
-                                    self.addSymbolHash(symHash, hashType, libKey, sym.name)
+                                    symName = sym.name
+                                    if isinstance(symName, bytes):
+                                        symName = symName.decode('utf-8', 'ignore')
+                                    self.addSymbolHash(symHash, hashType, libKey, symName)
                     #commit outstanding transaction
                     self.conn.commit()
                     time2 = time.time()
