@@ -46,7 +46,9 @@ from .struct_typer_widget import Ui_Dialog
 
 # get the IDA version number
 ida_major, ida_minor = list(map(int, idaapi.get_kernel_version().split(".")))
+print(f"IDA Version: {ida_major}.{ida_minor}")
 using_ida7api = (ida_major > 6)
+using_ida9api = (ida_major >= 9)
 
 logger = None
 
@@ -158,7 +160,21 @@ def loadMembers(struc, sid):
     members.sort(key = lambda mem: mem[0])
     return members
 
+def loadStructsIDA9():
+    import ida_typeinf
+    existingStructs = []
+    til = ida_typeinf.get_idati()
+    limit = ida_typeinf.get_ordinal_limit(til)
+    for i in range(1, limit):
+        tif = ida_typeinf.tinfo_t()
+        if tif.get_numbered_type(til, i) and tif.is_struct() and not tif.is_typedef():
+            existingStructs.append(tif.get_type_name())
+    existingStructs.sort()
+    return existingStructs
+
 def loadStructs():
+    if using_ida9api:
+        return loadStructsIDA9()
     idx = idaapi.get_first_struc_idx()
     existingStructs = []
     while idx != idc.BADADDR:
@@ -176,10 +192,11 @@ class StructTyperWidget(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, parent)
         try:
             logger.debug('StructTyperWidget starting up')
+            print(f"StructTyperWidget starting up. IDA 9 API: {using_ida9api}")
             self.ui=Ui_Dialog()
             self.ui.setupUi(self)
             self.ui.lineEdit.setText(g_DefaultPrefixRegexp)
-            self.ui.checkBox.setChecked(Qt.Unchecked)
+            self.ui.checkBox.setChecked(False)
         except Exception as err:
             logger.exception('Error during init: %s', str(err))
 
@@ -211,63 +228,104 @@ class StructTypeRunner(object):
             res = dlg.exec_()
             idaapi.set_script_timeout(oldTo)
             if res == QtWidgets.QDialog.Accepted:
+                print("Dialog accepted")
                 regPrefix = dlg.getRegPrefix()
                 sid = None
                 struc = None
                 if dlg.ui.rb_useStackFrame.isChecked():
                     ea = idc.here()
-                    if using_ida7api:
+                    if using_ida9api:
+                        import ida_typeinf
+                        import ida_frame
+                        import ida_funcs
+                        pfn = ida_funcs.get_func(ea)
+                        if not pfn:
+                            raise RuntimeError('Failed to get function at 0x%x' % ea)
+                        struc_tif = ida_typeinf.tinfo_t()
+                        if not ida_frame.get_func_frame(struc_tif, pfn):
+                            raise RuntimeError('Failed to get frame for function at 0x%x' % ea)
+                        foundMembers = self.processStructIDA9(regPrefix, struc_tif, pfn=pfn)
+                    elif using_ida7api:
                         sid = idc.get_frame_id(ea)
+                        struc = idaapi.get_frame(ea)
+                        logger.debug('Dialog result: accepted stack frame')
+                        if (sid is None) or (sid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get sid for stack frame at 0x%x' % ea) 
+                        if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
+                            raise RuntimeError('Failed to get struc_t for stack frame at 0x%x' % ea)
+                        foundMembers = self.processStructIDA7(regPrefix, struc, sid)
                     else:
                         sid = idc.GetFrame(ea)
-                    struc = idaapi.get_frame(ea)
-                    logger.debug('Dialog result: accepted stack frame')
-                    if (sid is None) or (sid == idc.BADADDR):
-                        #i should really figure out which is the correct error case
-                        raise RuntimeError('Failed to get sid for stack frame at 0x%x' % ea) 
-                    if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
-                        raise RuntimeError('Failed to get struc_t for stack frame at 0x%x' % ea)
-                    if using_ida7api:
-                        pass
-                    else:
+                        struc = idaapi.get_frame(ea)
+                        logger.debug('Dialog result: accepted stack frame')
+                        if (sid is None) or (sid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get sid for stack frame at 0x%x' % ea) 
+                        if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
+                            raise RuntimeError('Failed to get struc_t for stack frame at 0x%x' % ea)
                         #need the actual pointer value, not the swig wrapped struc_t
                         struc= int(struc.this)
+                        foundMembers = self.processStructIDA6(regPrefix, struc, sid)
                 else:
                     structName = dlg.getActiveStruct()
                     if structName is None:
                         print("No struct selected. Bailing out")
                         return
+                    print(f"Selected struct: {structName}")
                     logger.debug('Dialog result: accepted %s "%s"', type(structName), structName)
-                    if using_ida7api:
+                    if using_ida9api:
+                        import ida_typeinf
+                        til = ida_typeinf.get_idati()
+                        struc_tif = ida_typeinf.tinfo_t()
+                        if not struc_tif.get_named_type(til, structName, ida_typeinf.BTF_STRUCT):
+                            raise RuntimeError('Failed to get type for %s' % structName)
+                        foundMembers = self.processStructIDA9(regPrefix, struc_tif)
+                    elif using_ida7api:
                         sid = idc.get_struc_id(structName)
+                        if (sid is None) or (sid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get sid for %s' % structName) 
+                        tid = idaapi.get_struc_id(structName)
+                        if (tid is None) or (tid == 0) or (tid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get tid_t for %s' % structName)
+                        struc = idaapi.get_struc(tid)
+                        if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
+                            raise RuntimeError('Failed to get struc_t for %s' % structName)
+                        foundMembers = self.processStructIDA7(regPrefix, struc, sid)
                     else:
                         sid = idc.GetStrucIdByName(structName)
-                    if (sid is None) or (sid == idc.BADADDR):
-                        #i should really figure out which is the correct error case
-                        raise RuntimeError('Failed to get sid for %s' % structName) 
-                    tid = idaapi.get_struc_id(structName)
-                    if (tid is None) or (tid == 0) or (tid == idc.BADADDR):
-                        #i should really figure out which is the correct error case
-                        raise RuntimeError('Failed to get tid_t for %s' % structName)
-                    if using_ida7api:
-                        struc = idaapi.get_struc(tid)
-                    else:
+                        if (sid is None) or (sid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get sid for %s' % structName) 
+                        tid = idaapi.get_struc_id(structName)
+                        if (tid is None) or (tid == 0) or (tid == idc.BADADDR):
+                            #i should really figure out which is the correct error case
+                            raise RuntimeError('Failed to get tid_t for %s' % structName)
                         struc = g_dll.get_struc(tid)
-                    if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
-                        raise RuntimeError('Failed to get struc_t for %s' % structName)
-                foundMembers = self.processStruct(regPrefix, struc, sid)
+                        if (struc is None) or (struc == 0) or (struc == idc.BADADDR):
+                            raise RuntimeError('Failed to get struc_t for %s' % structName)
+                        foundMembers = self.processStructIDA6(regPrefix, struc, sid)
+                
                 if dlg.ui.rb_useStackFrame.isChecked() and (foundMembers != 0):
                     #reanalyze current function if we're analyzing a stack frame & found some func pointers
-                    if using_ida7api:
+                    if using_ida9api:
+                        import ida_funcs
+                        import ida_auto
+                        func = ida_funcs.get_func(idc.here())
+                        if func:
+                            ida_auto.plan_range(func.start_ea, func.end_ea)
+                            ida_auto.auto_wait()
+                    elif using_ida7api:
                         funcstart = idc.get_func_attr(idc.here(), idc.FUNCATTR_START)
                         funcend = idc.get_func_attr(idc.here(), idc.FUNCATTR_END)
+                        if (funcstart != idc.BADADDR) and (funcend != idc.BADADDR):
+                            idc.plan_and_wait(funcstart, funcend)
                     else:
                         funcstart = idc.GetFunctionAttr(idc.here(), idc.FUNCATTR_START)
                         funcend = idc.GetFunctionAttr(idc.here(), idc.FUNCATTR_END)
-                    if (funcstart != idc.BADADDR) and (funcend != idc.BADADDR):
-                        if using_ida7api:
-                            idc.plan_and_wait(funcstart, funcend)
-                        else:
+                        if (funcstart != idc.BADADDR) and (funcend != idc.BADADDR):
                             idc.AnalyzeArea(funcstart, funcend)
             elif res == QtWidgets.QDialog.Rejected:
                 logger.info('Dialog result: canceled by user')
@@ -290,6 +348,46 @@ class StructTypeRunner(object):
                 pass
         return funcname
 
+    def processStructIDA9(self, regPrefix, struc_tif, pfn=None):
+        import ida_typeinf, ida_frame
+        udt = ida_typeinf.udt_type_data_t()
+        if not struc_tif.get_udt_details(udt): return 0
+        
+        foundFunctions = 0
+        changed = False
+        
+        for i in range(len(udt)):
+            udm = udt[i]
+            funcname = self.filterName(regPrefix, udm.name)
+            tup = ida_typeinf.get_named_type(None, funcname, ida_typeinf.NTF_SYMM)
+            if not tup and idc.import_type(-1, funcname) != idc.BADADDR:
+                tup = ida_typeinf.get_named_type(None, funcname, ida_typeinf.NTF_SYMM)
+            
+            if not tup: continue
+
+            func_tif = ida_typeinf.tinfo_t()
+            if not func_tif.deserialize(None, tup[1], tup[2], tup[3]) or not func_tif.is_func():
+                continue
+            
+            foundFunctions += 1
+            ptr_tif = ida_typeinf.tinfo_t()
+            ptr_tif.create_ptr(func_tif)
+            
+            if pfn:
+                ida_frame.set_frame_member_type(pfn, udm.offset // 8, ptr_tif)
+            else:
+                udm.type = ptr_tif
+                udt[i] = udm
+                changed = True
+            logger.info('Updated member %s to type %s', udm.name, ptr_tif.dstr())
+                
+        if changed and not pfn:
+            typename = struc_tif.get_type_name()
+            if struc_tif.create_udt(udt, ida_typeinf.BTF_STRUCT):
+                struc_tif.set_named_type(ida_typeinf.get_idati(), typename, ida_typeinf.NTF_REPLACE)
+            
+        return foundFunctions
+
     def processStructIDA7(self, regPrefix, struc, sid):
         members = loadMembers(struc, sid)
         foundFunctions = 0
@@ -311,13 +409,12 @@ class StructTypeRunner(object):
                 logger.info("Got set_member_tinfo ret code: %d" % ret)
             else:
                 logger.info('set_member_tinfo: %s', tif.dstr())
+        return foundFunctions
 
-    def processStruct(self, regPrefix, struc, sid):
+    def processStructIDA6(self, regPrefix, struc, sid):
         '''
         Returns the number of identified struct members whose type was found
         '''
-        if using_ida7api:
-            return self.processStructIDA7(regPrefix, struc, sid)
         til = ctypes.c_void_p.in_dll(g_dll, 'idati')
         members = loadMembers(struc, sid)
         foundFunctions = 0
