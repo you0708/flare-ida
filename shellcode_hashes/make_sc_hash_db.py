@@ -45,7 +45,11 @@ INTERESTING_DLLS = [
     'ntoskrnl.exe', 'oleaut32.dll', 'psapi.dll',    'shell32.dll',
     'shlwapi.dll',  'srsvc.dll',    'urlmon.dll',   'user32.dll',
     'winhttp.dll',  'wininet.dll',  'ws2_32.dll',   'wship6.dll',
-    'advpack.dll', 'ole32.dll', 'rstrtmgr.dll', 'iphlpapi.dll',
+    'advpack.dll',  'ole32.dll',    'rstrtmgr.dll', 'iphlpapi.dll',
+    'hal.dll',      'dnsapi.dll',   'userenv.dll',  'secur32.dll',
+    'ddraw.dll',    'ntdsapi.dll',  'version.dll',  'winmm.dll',
+    'wsock32.dll',  'ntkrnlpa.exe', 'cabinet.dll',  'wow64cpu.dll',
+    'gdiplus.dll',  'mpr.dll',      'crypt32.dll',
 ]
 
 VERBOSE=False
