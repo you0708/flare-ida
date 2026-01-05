@@ -28,9 +28,13 @@ import logging
 import traceback
 
 
-from PyQt5 import QtWidgets
-from PyQt5 import QtCore 
-from PyQt5.QtCore import Qt
+try:
+    from PySide6 import QtWidgets, QtCore
+    from PySide6.QtCore import Qt
+    QtCore.pyqtSignal = QtCore.Signal
+except ImportError:
+    from PyQt5 import QtWidgets, QtCore
+    from PyQt5.QtCore import Qt
 
 # Import the compiled UI module
 from . shellcodechooser import Ui_ShellcodeChooser

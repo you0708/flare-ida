@@ -38,7 +38,11 @@ from . import jayutils
 
 QT_AVAILABLE = True
 try:
-    from PyQt5 import QtWidgets, QtCore
+    try:
+        from PySide6 import QtWidgets, QtCore
+        QtWidgets.QDialog.exec_ = QtWidgets.QDialog.exec
+    except ImportError:
+        from PyQt5 import QtWidgets, QtCore
     from .shellcode_widget import ShellcodeWidget
 except ImportError as err:
     print('ImportError: %s' % err)

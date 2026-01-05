@@ -22,10 +22,13 @@ import os
 import logging
 import idaapi
 from configparser import ConfigParser
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
+try:
+    from PySide6 import QtWidgets, QtGui, QtCore
+    from PySide6.QtCore import Qt
+    QtWidgets.QDialog.exec_ = QtWidgets.QDialog.exec
+except ImportError:
+    from PyQt5 import QtWidgets, QtGui, QtCore
+    from PyQt5.QtCore import Qt
 
 idaapi.require("IDB_MSDN_Annotator")
 

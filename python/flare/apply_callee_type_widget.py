@@ -7,7 +7,10 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtWidgets
+try:
+    from PySide6 import QtCore, QtWidgets
+except ImportError:
+    from PyQt5 import QtCore, QtWidgets
 
 class Ui_ApplyCalleeDialog(object):
     def setupUi(self, ApplyCalleeDialog):
