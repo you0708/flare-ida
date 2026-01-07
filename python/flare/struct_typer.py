@@ -46,7 +46,6 @@ from .struct_typer_widget import Ui_Dialog
 
 # get the IDA version number
 ida_major, ida_minor = list(map(int, idaapi.get_kernel_version().split(".")))
-print(f"IDA Version: {ida_major}.{ida_minor}")
 using_ida7api = (ida_major > 6)
 using_ida9api = (ida_major >= 9)
 
@@ -192,7 +191,6 @@ class StructTyperWidget(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, parent)
         try:
             logger.debug('StructTyperWidget starting up')
-            print(f"StructTyperWidget starting up. IDA 9 API: {using_ida9api}")
             self.ui=Ui_Dialog()
             self.ui.setupUi(self)
             self.ui.lineEdit.setText(g_DefaultPrefixRegexp)
@@ -228,7 +226,6 @@ class StructTypeRunner(object):
             res = dlg.exec_()
             idaapi.set_script_timeout(oldTo)
             if res == QtWidgets.QDialog.Accepted:
-                print("Dialog accepted")
                 regPrefix = dlg.getRegPrefix()
                 sid = None
                 struc = None
@@ -270,9 +267,8 @@ class StructTypeRunner(object):
                 else:
                     structName = dlg.getActiveStruct()
                     if structName is None:
-                        print("No struct selected. Bailing out")
+                        logger.info("No struct selected. Bailing out")
                         return
-                    print(f"Selected struct: {structName}")
                     logger.debug('Dialog result: accepted %s "%s"', type(structName), structName)
                     if using_ida9api:
                         import ida_typeinf
