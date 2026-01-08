@@ -3,27 +3,27 @@ This repository contains a collection of IDA Pro scripts and plugins used by the
 
 ## plugins ##
 
-To install, copy the contents of the plugins directory in this repository to your %PROGRAMFILES%\IDA\plugins folder. 
+To install, copy the contents of the plugins directory in this repository to your $IDAUSER/plugins folder. 
 
 ## python ##
-The python directory here can be copied to your %PROGRAMFILES%\IDA\python folder, or you can modify your PYTHONPATH environment variable to include the directory.
+The python directory here can be copied to your $IDAUSER/python folder, or you can modify your PYTHONPATH environment variable to include the directory.
 
 ## Provided Plugins ##
 
 ### Shellcode Hashes  ###
-The shellcode_hashes_search_plugin.py IDA plugin implements the hash searching described here: https://www.mandiant.com/blog/precalculated-string-hashes-reverse-engineering-shellcode/.
+The shellcode_hashes_search_plugin.py IDA plugin implements the hash searching described here: https://cloud.google.com/blog/topics/threat-intelligence/precalculated-string-hashes-reverse-engineering-shellcode/
 
 The shellcode_hashes directory contains the script used to create the database for the shellcode_hash_search.py script, along with a provided database.
 
 ### Struct Typer ###
-The struct_typer_plugin.py plugin implements the struct typing described here: https://www.mandiant.com/blog/applying-function-types-structure-fields-ida/
+The struct_typer_plugin.py plugin implements the struct typing described here: https://cloud.google.com/blog/topics/threat-intelligence/function-types-structure-fields-ida/
 
 
 ### StackStrings ###
-The stackstrings_plugin.py implements the recovery of manually constructed strings described here: http://www.fireeye.com/blog/threat-research/2014/08/flare-ida-pro-script-series-automatic-recovery-of-constructed-strings-in-malware.html
+The stackstrings_plugin.py implements the recovery of manually constructed strings described here: https://cloud.google.com/blog/topics/threat-intelligence/automatic-recovery-constructed-strings/
 
 ### MSDN Annotations ###
-This script for IDA Pro adds MSDN information from a XML file to the database. Information about this plugin can be found at: https://www.fireeye.com/blog/threat-research/2014/09/flare-ida-pro-script-series-msdn-annotations-ida-pro-for-malware-analysis.html
+This script for IDA Pro adds MSDN information from a XML file to the database. Information about this plugin can be found at: https://cloud.google.com/blog/topics/threat-intelligence/msdn-annotations-plugin/
 
 The following functionality is included:
 
@@ -48,12 +48,12 @@ After executing the script once, *View - Recent scripts* (ALT + F9) can be used
 as well.
 
 ### ApplyCalleeType ###
-This plugin allows you to specify or choose a function type for indirect calls as described here: https://www.fireeye.com/blog/threat-research/2015/04/flare_ida_pro_script.html
+This plugin allows you to specify or choose a function type for indirect calls as described here: https://cloud.google.com/blog/topics/threat-intelligence/function-prototypes-indirect-calls/
 
 
 ### idb2pat ###
 This script allows you to easily generate function patterns from an existing IDB database that can then be turned into FLIRT signatures to help identify similar functions in new files. More information is available at:
-https://www.fireeye.com/blog/threat-research/2015/01/flare_ida_pro_script.html
+https://cloud.google.com/blog/topics/threat-intelligence/flare-ida-pro-script/
 
 
 ### argtracker ###
@@ -64,7 +64,7 @@ This utility can help you identify static arguments to functions used within a p
 
 A blog post with further information is available at:
 
-https://www.fireeye.com/blog/threat-research/2015/11/flare_ida_pro_script.html
+https://cloud.google.com/blog/topics/threat-intelligence/automating-function-argument-extraction/
 
 ### objc2_analyzer ###
 This script creates cross-references between selector references and their implementations as defined in the Objective-C  runtime related sections of the target Mach-O executable. It also patches selector reference pointers to instead point to their implementation function. This makes analysis of Objective-C code easier by enabling smooth transitions between an implementation and the locations where its selector is referenced throughout the code. Helpful Objective-C code comments are added to each call to objc_msgSend variants to clearly indicate which method is being called on which class.
